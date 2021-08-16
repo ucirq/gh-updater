@@ -1,0 +1,59 @@
+version: 2.1
+orbs:
+  slack: circleci/slack@4.3.0
+  gcp-gcr: circleci/gcp-gcr@0.6.1
+  gcp-gke: circleci/gcp-gke@1.0.3
+  gcp-cli: circleci/gcp-cli@1.8.4
+jobs:
+  build-and-push-image:
+    docker:
+      - image: google/cloud-sdk:latest
+    working_directory: ~/code
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: "20.10.6"
+          docker_layer_caching: true
+      - gcp-gcr/gcr-auth
+      - gcp-gcr/build-image:
+          registry-url: eu.gcr.io
+          image: ${CIRCLE_PROJECT_REPONAME}
+          tag: ${CIRCLE_SHA1}
+      - gcp-gcr/push-image:
+          registry-url: eu.gcr.io
+          image: ${CIRCLE_PROJECT_REPONAME}
+          tag: ${CIRCLE_SHA1}
+      - gcp-gcr/tag-image:
+          registry-url: eu.gcr.io
+          image: ${CIRCLE_PROJECT_REPONAME}
+          source-tag: ${CIRCLE_SHA1}
+          target-tag: latest
+  update-container-image:
+    docker:
+      - image: google/cloud-sdk:latest
+    steps:
+      - gcp-gke/install
+      - gcp-cli/initialize
+  notify-slack:
+    docker:
+      - image: 'cimg/base:stable'
+    steps:
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
+      - slack/notify:
+          event: pass
+          template: success_tagged_deploy_1
+workflows:
+  build-and-release-application:
+    jobs:
+      - build-and-push-image:
+          context: Google Cloud Platform
+      - update-container-image:
+          context: Google Cloud Platform
+          requires:
+            - build-and-push-image
+      - notify-slack:
+          context: Slack
+          requires:
+            - update-container-image
