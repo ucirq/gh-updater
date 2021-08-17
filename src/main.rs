@@ -8,7 +8,8 @@ use crate::config::Config;
 use crate::yaml::yaml_update;
 
 fn setup_gh(config: &Config) -> Result<Github, Box<dyn Error>> {
-    let cred = JWTCredentials::new(config.app_id, config.private_key_der())?;
+    let key = config.private_key_der()?;
+    let cred = JWTCredentials::new(config.app_id, key)?;
     let tokgen = InstallationTokenGenerator::new(config.installation_id, cred);
     let github = Github::new("gh-updater/0.1", Credentials::InstallationToken(tokgen))?;
     Ok(github)
@@ -22,7 +23,7 @@ fn commit_message(config: &Config) -> String {
     }
 }
 
-#[tokio::main(flavor = "current_thread")]
+#[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = envy::from_env::<Config>()?;
 
