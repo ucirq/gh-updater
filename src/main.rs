@@ -27,6 +27,11 @@ fn commit_message(config: &Config) -> String {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = envy::from_env::<Config>()?;
 
+    if config.new_tag.is_none() {
+	println!("No new tag specificed. Exiting!");
+	return Ok(());
+    }
+
     let github = setup_gh(&config.clone())?;
     let repo = github.repo(config.clone().repo_owner, config.clone().repo_name);
 

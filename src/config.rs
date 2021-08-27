@@ -13,7 +13,7 @@ pub struct Config {
     pub file_to_edit: String,
     pub image_name: String,
     pub new_name: Option<String>,
-    #[serde(alias = "CIRCLE_SHA1")]
+    #[serde(alias = "circle_sha1")]
     pub new_tag: Option<String>,
 }
 
