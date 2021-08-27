@@ -1,0 +1,28 @@
+{
+  "name": "gh-updater",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ucirq/gh-updater.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ucirq/gh-updater/issues"
+  },
+  "homepage": "https://github.com/ucirq/gh-updater#readme",
+  "dependencies": {
+    "@types/yawn-yaml": "^1.4.0",
+    "octokit": "^1.4.0",
+    "typescript": "^4.4.2",
+    "yawn-yaml": "^1.5.0"
+  },
+  "devDependencies": {
+    "@tsconfig/node16": "^1.0.2"
+  }
+}
