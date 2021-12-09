@@ -1,6 +1,14 @@
 import { createAppAuth } from "@octokit/auth-app";
+import { Command } from "commander";
 import { Octokit } from "octokit";
 import YawnYaml from "yawn-yaml/cjs";
+const program = new Command();
+
+program.option("--ignore <env>", "environment to skip");
+
+program.parse(process.argv);
+
+const options = program.opts();
 
 function mustEnv(name: string): string {
   const value = process.env[name];
@@ -9,6 +17,8 @@ function mustEnv(name: string): string {
   }
   return value;
 }
+
+const SKIP_PROD = process.argv;
 
 const privateKey = mustEnv("PRIVATE_KEY_PEM").replaceAll("^", "\n").trim();
 
@@ -99,7 +109,10 @@ async function findEnvironments(): Promise<string[]> {
   if (!Array.isArray(folder.data)) {
     throw new Error("No folder found at path");
   }
-  return folder.data.filter((x) => x.name !== "base").map((x) => x.name);
+  return folder.data
+    .filter((x) => x.name !== "base")
+    .filter((x) => !options.ignore || x.name !== options.ignore)
+    .map((x) => x.name);
 }
 
 function environmentShouldPR(environment: string): boolean {
