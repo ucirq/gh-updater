@@ -82,14 +82,20 @@ function octokitFromConfiguration({
   appId,
   installationId,
 }: Configuration): Octokit {
-  return new Octokit({
-    authStrategy: createAppAuth,
-    auth: {
-      appId,
-      privateKey,
-      installationId,
-    },
-  });
+  try {
+    return new Octokit({
+      authStrategy: createAppAuth,
+      auth: {
+        appId,
+        privateKey,
+        installationId,
+      },
+    });
+  } catch (e) {
+    core.error(e as Error);
+    core.error("Error in key" + privateKey.slice(0, 25));
+    throw e;
+  }
 }
 
 function path(configuration: Configuration, environment: string) {
