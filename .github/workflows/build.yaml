@@ -26,5 +26,3 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: latest
-          cache-from: ghcr.io/ucirq/gh-updater:buildcache
-          cache-to: type=registry,ref=ghcr.io/ucirq/gh-updater:buildcache,mode=max
