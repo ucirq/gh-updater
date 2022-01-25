@@ -6,7 +6,8 @@ COPY package.json package-lock.json tsconfig.json ./
 RUN npm install
 
 COPY src ./src
-RUN npm run all
+RUN npm run build
+RUN npm run package
 
 FROM node:16-alpine AS runtime
 
