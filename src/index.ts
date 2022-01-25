@@ -1,51 +1,108 @@
+import * as core from "@actions/core";
+import * as github from "@actions/github";
 import { createAppAuth } from "@octokit/auth-app";
+import { PushEvent } from "@octokit/webhooks-definitions/schema";
 import { Command } from "commander";
 import { Octokit } from "octokit";
 import YawnYaml from "yawn-yaml/cjs";
 const program = new Command();
-
 program.option("--ignore <env>", "environment to skip");
 
 program.parse(process.argv);
 
 const options = program.opts();
 
-function mustEnv(name: string): string {
-  const value = process.env[name];
+function mustEnv(name: string, alt?: string): string {
+  const value =
+    process.env[name] ?? (alt != null ? process.env[alt] : undefined);
   if (!value) {
     throw new Error(`Missing environment variable ${name}`);
   }
   return value;
 }
 
-const SKIP_PROD = process.argv;
+interface Configuration {
+  readonly privateKey: string;
+  readonly appId: string;
+  readonly installationId: string;
 
-const privateKey = mustEnv("PRIVATE_KEY_PEM").replaceAll("^", "\n").trim();
-
-const octokit = new Octokit({
-  authStrategy: createAppAuth,
-  auth: {
-    appId: mustEnv("APP_ID"),
-    privateKey,
-    installationId: mustEnv("INSTALLATION_ID"),
-  },
-});
-
-const GIT_SHA = mustEnv("CIRCLE_SHA1");
-const REPO_NAME = process.env.REPO_NAME ?? "k8s";
-const REPO_OWNER = mustEnv("CIRCLE_PROJECT_USERNAME");
-const SOURCE_REPO_NAME = mustEnv("CIRCLE_PROJECT_REPONAME");
-const IMAGE_NAME = process.env.IMAGE_NAME ?? "app-image";
-const CIRCLE_USERNAME = process.env.CIRCLE_USERNAME;
-function path(environment: string) {
-  return `services/${SOURCE_REPO_NAME}/${environment}/kustomization.yaml`;
+  readonly gitSha: string;
+  readonly repoName: string;
+  readonly repoOwner: string;
+  readonly sourceRepoName: string;
+  readonly imageName: string;
+  readonly username: string | null;
 }
 
-async function patchRepo(environment: string, branch: string = "master") {
+function configurationFromEnv(): Configuration {
+  const imageName = process.env.IMAGE_NAME ?? "app-image";
+  const repoName = process.env.REPO_NAME ?? "k8s";
+  if (process.env.GITHUB_ACTIONS === "true") {
+    if (github.context.eventName !== "push") {
+      throw new Error("Only supports push events");
+    }
+    const p = github.context.payload as PushEvent;
+    return {
+      privateKey: core.getInput("PRIVATE_KEY_PEM", {
+        required: true,
+        trimWhitespace: false,
+      }),
+      appId: core.getInput("APP_ID", { required: true }),
+      installationId: core.getInput("INSTALLATION_ID", { required: true }),
+      imageName,
+      repoName,
+      gitSha: p.after,
+      sourceRepoName: p.repository.name,
+      repoOwner: p.repository.owner.login,
+      username: p.sender.login,
+    };
+  } else {
+    const privateKey = mustEnv("PRIVATE_KEY_PEM").replaceAll("^", "\n").trim();
+    const appId = mustEnv("APP_ID");
+    const installationId = mustEnv("INSTALLATION_ID");
+    return {
+      privateKey,
+      appId,
+      installationId,
+      gitSha: mustEnv("CIRCLE_SHA1"),
+      repoName: process.env.REPO_NAME ?? "k8s",
+      repoOwner: mustEnv("CIRCLE_PROJECT_USERNAME"),
+      sourceRepoName: mustEnv("CIRCLE_PROJECT_REPONAME"),
+      imageName,
+      username: process.env.CIRCLE_USERNAME ?? null,
+    };
+  }
+}
+
+function octokitFromConfiguration({
+  privateKey,
+  appId,
+  installationId,
+}: Configuration): Octokit {
+  return new Octokit({
+    authStrategy: createAppAuth,
+    auth: {
+      appId,
+      privateKey,
+      installationId,
+    },
+  });
+}
+
+function path(configuration: Configuration, environment: string) {
+  return `services/${configuration.sourceRepoName}/${environment}/kustomization.yaml`;
+}
+
+async function patchRepo(
+  configuration: Configuration,
+  octokit: Octokit,
+  environment: string,
+  branch = "master"
+) {
   const fileLocation = {
-    owner: REPO_OWNER,
-    repo: REPO_NAME,
-    path: path(environment),
+    owner: configuration.repoOwner,
+    repo: configuration.repoName,
+    path: path(configuration, environment),
   };
 
   const { data } = await octokit.rest.repos.getContent(fileLocation);
@@ -58,14 +115,13 @@ async function patchRepo(environment: string, branch: string = "master") {
   }
   const { content, sha } = data;
 
-  const newYaml = patchYaml(content);
+  const newYaml = patchYaml(configuration, content);
 
-  let message = `Update ${SOURCE_REPO_NAME} ${environment} to ${GIT_SHA.slice(
-    0,
-    7
-  )}`;
-  if (CIRCLE_USERNAME) {
-    message += `\n Signed-off-by: ${CIRCLE_USERNAME}`;
+  let message = `Update ${
+    configuration.sourceRepoName
+  } ${environment} to ${configuration.gitSha.slice(0, 7)}`;
+  if (configuration.username) {
+    message += `\n\nSigned-off-by: ${configuration.username}\n`;
   }
   await octokit.rest.repos.createOrUpdateFileContents({
     ...fileLocation,
@@ -76,7 +132,7 @@ async function patchRepo(environment: string, branch: string = "master") {
   });
 }
 
-function patchYaml(data: string): string {
+function patchYaml(configuration: Configuration, data: string): string {
   const yy = new YawnYaml(Buffer.from(data, "base64").toString("utf8"));
 
   const d = yy.json;
@@ -85,25 +141,28 @@ function patchYaml(data: string): string {
     d["images"] = [];
   }
   const images: Record<string, string>[] = d["images"];
-  const img = images.find((x) => x.name === IMAGE_NAME);
+  const img = images.find((x) => x.name === configuration.imageName);
 
   if (!img) {
     images.push({
-      name: IMAGE_NAME,
-      newTag: GIT_SHA,
+      name: configuration.imageName,
+      newTag: configuration.gitSha,
     });
   } else {
-    img.newTag = GIT_SHA;
+    img.newTag = configuration.gitSha;
   }
   yy.json = d;
   return yy.yaml;
 }
 
-async function findEnvironments(): Promise<string[]> {
+async function findEnvironments(
+  octokit: Octokit,
+  configuration: Configuration
+): Promise<string[]> {
   const folderLocation = {
-    owner: REPO_OWNER,
-    repo: REPO_NAME,
-    path: `services/${SOURCE_REPO_NAME}`,
+    owner: configuration.repoOwner,
+    repo: configuration.repoName,
+    path: configuration.sourceRepoName,
   };
   const folder = await octokit.rest.repos.getContent(folderLocation);
   if (!Array.isArray(folder.data)) {
@@ -120,6 +179,7 @@ function environmentShouldPR(environment: string): boolean {
 }
 
 async function createBranchOffMaster(
+  octokit: Octokit,
   owner: string,
   repo: string,
   branch: string
@@ -131,7 +191,7 @@ async function createBranchOffMaster(
   });
   const sha = master.data.object.sha;
 
-  const branchCreation = await octokit.rest.git.createRef({
+  await octokit.rest.git.createRef({
     owner,
     repo,
     ref: `refs/heads/${branch}`,
@@ -139,47 +199,57 @@ async function createBranchOffMaster(
   });
 }
 
-async function patchEnvironment(environment: string) {
+async function patchEnvironment(
+  configuration: Configuration,
+  octokit: Octokit,
+  environment: string
+) {
   const shouldPR = environmentShouldPR(environment);
   if (!shouldPR) {
-    await patchRepo(environment);
+    await patchRepo(configuration, octokit, environment);
   } else {
     const rand = Math.floor(Math.random() * 1000).toString(36);
-    const branch = `auto-${GIT_SHA}-${rand}`;
+    const branch = `auto-${configuration.gitSha}-${rand}`;
 
-    await createBranchOffMaster(REPO_OWNER, REPO_NAME, branch);
-    await patchRepo(environment, branch);
+    await createBranchOffMaster(
+      octokit,
+      configuration.repoOwner,
+      configuration.repoName,
+      branch
+    );
+    await patchRepo(configuration, octokit, environment, branch);
 
     const pr = await octokit.rest.pulls.create({
-      owner: REPO_OWNER,
-      repo: REPO_NAME,
-      title: `Deploy \`${SOURCE_REPO_NAME}\` to ${environment}, ${GIT_SHA.slice(
-        0,
-        7
-      )}`,
+      owner: configuration.repoOwner,
+      repo: configuration.repoName,
+      title: `Deploy \`${
+        configuration.sourceRepoName
+      }\` to ${environment}, ${configuration.gitSha.slice(0, 7)}`,
       head: branch,
       base: "master",
       maintainer_can_modify: true,
       body: "This is an automated pull-request.",
     });
-    if (CIRCLE_USERNAME) {
+    if (configuration.username) {
       await octokit.rest.pulls.requestReviewers({
-        owner: REPO_OWNER,
-        repo: REPO_NAME,
+        owner: configuration.repoOwner,
+        repo: configuration.repoName,
         pull_number: pr.data.number,
-        reviewers: [CIRCLE_USERNAME],
+        reviewers: [configuration.username],
       });
     }
   }
 }
 
 async function main() {
-  const environments = await findEnvironments();
+  const configuration = configurationFromEnv();
+  const octokit = octokitFromConfiguration(configuration);
+  const environments = await findEnvironments(octokit, configuration);
   const shouldPR = environments.filter((x) => environmentShouldPR(x));
   const nonPR = environments.filter((x) => !environmentShouldPR(x));
   const sortedEnvironments = nonPR.concat(shouldPR);
   for (const environment of sortedEnvironments) {
-    await patchEnvironment(environment);
+    await patchEnvironment(configuration, octokit, environment);
   }
 }
 

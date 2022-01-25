@@ -1,0 +1,17 @@
+name: 'GH Updater'
+description: 'Updates kubernetes configs on Github'
+author: 'Droppa'
+inputs:
+  APP_ID:
+    description: 'The app ID to update'
+    required: true
+  PRIVATE_KEY_PEM:
+    description: 'The private key to use to sign the request'
+    required: true
+  INSTALLATION_ID:
+    description: 'The installation ID to use to make the request'
+    required: true
+
+runs:
+  using: 'node16'
+  main: 'dist/index.js'
