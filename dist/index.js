@@ -58,7 +58,7 @@ function configurationFromEnv() {
             privateKey: core.getInput("PRIVATE_KEY_PEM", {
                 required: true,
                 trimWhitespace: false,
-            }),
+            }).replaceAll("^", "\n").trim(),
             appId: core.getInput("APP_ID", { required: true }),
             installationId: core.getInput("INSTALLATION_ID", { required: true }),
             imageName,
