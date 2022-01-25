@@ -92,6 +92,7 @@ function octokitFromConfiguration({
       },
     });
   } catch (e) {
+    console.log("Error in key" + privateKey.slice(0, 25));
     core.error(e as Error);
     core.error("Error in key" + privateKey.slice(0, 25));
     throw e;
