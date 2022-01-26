@@ -93,6 +93,7 @@ function configurationFromEnv() {
 }
 function octokitFromConfiguration({ privateKey, appId, installationId, ciProvider, }) {
     try {
+        console.log("privateKey", privateKey.slice(0, 20));
         return new octokit_1.Octokit({
             authStrategy: auth_app_1.createAppAuth,
             auth: {
