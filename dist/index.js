@@ -61,10 +61,13 @@ function configurationFromEnv() {
         }
         const p = github.context.payload;
         return {
-            privateKey: core.getInput("PRIVATE_KEY_PEM", {
+            privateKey: core
+                .getInput("PRIVATE_KEY_PEM", {
                 required: true,
                 trimWhitespace: false,
-            }).replaceAll("^", "\n").trim(),
+            })
+                .replaceAll("^", "\n")
+                .trim(),
             appId: core.getInput("APP_ID", { required: true }),
             installationId: core.getInput("INSTALLATION_ID", { required: true }),
             imageName,
@@ -93,14 +96,22 @@ function configurationFromEnv() {
     }
 }
 function octokitFromConfiguration({ privateKey, appId, installationId, }) {
-    return new octokit_1.Octokit({
-        authStrategy: auth_app_1.createAppAuth,
-        auth: {
-            appId,
-            privateKey,
-            installationId,
-        },
-    });
+    try {
+        return new octokit_1.Octokit({
+            authStrategy: auth_app_1.createAppAuth,
+            auth: {
+                appId,
+                privateKey,
+                installationId,
+            },
+        });
+    }
+    catch (e) {
+        console.log("Error in key" + privateKey.slice(0, 25));
+        core.error(e);
+        core.error("Error in key" + privateKey.slice(0, 25));
+        throw e;
+    }
 }
 function path(configuration, environment) {
     return `services/${configuration.sourceRepoName}/${environment}/kustomization.yaml`;

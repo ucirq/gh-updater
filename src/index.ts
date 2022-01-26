@@ -22,6 +22,7 @@ function mustEnv(name: string, alt?: string): string {
 }
 
 interface Configuration {
+  readonly ciProvider: "github" | "circle";
   readonly privateKey: string;
   readonly appId: string;
   readonly installationId: string;
@@ -43,6 +44,7 @@ function configurationFromEnv(): Configuration {
     }
     const p = github.context.payload as PushEvent;
     return {
+      ciProvider: "github",
       privateKey: core
         .getInput("PRIVATE_KEY_PEM", {
           required: true,
@@ -64,6 +66,7 @@ function configurationFromEnv(): Configuration {
     const appId = mustEnv("APP_ID");
     const installationId = mustEnv("INSTALLATION_ID");
     return {
+      ciProvider: "circle",
       privateKey,
       appId,
       installationId,
@@ -81,12 +84,13 @@ function octokitFromConfiguration({
   privateKey,
   appId,
   installationId,
+  ciProvider,
 }: Configuration): Octokit {
   try {
     return new Octokit({
       authStrategy: createAppAuth,
       auth: {
-        appId,
+        appId: parseInt(appId, 10),
         privateKey,
         installationId,
       },
