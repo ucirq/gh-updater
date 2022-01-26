@@ -92,7 +92,7 @@ function octokitFromConfiguration({
       auth: {
         appId: parseInt(appId, 10),
         privateKey,
-        installationId,
+        installationId: parseInt(installationId, 10),
       },
     });
   } catch (e) {
