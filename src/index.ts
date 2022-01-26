@@ -86,14 +86,22 @@ function octokitFromConfiguration({
   installationId,
 }: Configuration): Octokit {
   try {
-    console.log("privateKey", privateKey.slice(0, 20));
+    const auth = {
+      appId: parseInt(appId, 10),
+      privateKey,
+      installationId: parseInt(installationId, 10),
+    };
+    console.log(
+      "privateKey",
+      privateKey.slice(0, 20),
+      "appId",
+      appId.toString().split("").join(" "),
+      "installationId",
+      installationId.toString().split("").join(" ")
+    );
     return new Octokit({
       authStrategy: createAppAuth,
-      auth: {
-        appId: parseInt(appId, 10),
-        privateKey,
-        installationId: parseInt(installationId, 10),
-      },
+      auth,
     });
   } catch (e) {
     console.log("Error in key" + privateKey.slice(0, 25));

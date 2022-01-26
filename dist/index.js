@@ -91,16 +91,17 @@ function configurationFromEnv() {
         };
     }
 }
-function octokitFromConfiguration({ privateKey, appId, installationId, ciProvider, }) {
+function octokitFromConfiguration({ privateKey, appId, installationId, }) {
     try {
-        console.log("privateKey", privateKey.slice(0, 20));
+        const auth = {
+            appId: parseInt(appId, 10),
+            privateKey,
+            installationId: parseInt(installationId, 10),
+        };
+        console.log("privateKey", privateKey.slice(0, 20), "appId", appId.toString().split("").join(" "), "installationId", installationId.toString().split("").join(" "));
         return new octokit_1.Octokit({
             authStrategy: auth_app_1.createAppAuth,
-            auth: {
-                appId: parseInt(appId, 10),
-                privateKey,
-                installationId: parseInt(installationId, 10),
-            },
+            auth,
         });
     }
     catch (e) {
