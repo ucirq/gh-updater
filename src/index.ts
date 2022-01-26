@@ -176,7 +176,7 @@ async function findEnvironments(
   const folderLocation = {
     owner: configuration.repoOwner,
     repo: configuration.repoName,
-    path: configuration.sourceRepoName,
+    path: `services/${configuration.sourceRepoName}`,
   };
   const folder = await octokit.rest.repos.getContent(folderLocation);
   if (!Array.isArray(folder.data)) {
