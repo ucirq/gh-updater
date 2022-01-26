@@ -98,7 +98,6 @@ function octokitFromConfiguration({ privateKey, appId, installationId, }) {
             privateKey,
             installationId: parseInt(installationId, 10),
         };
-        console.log("privateKey", privateKey.slice(0, 20), "appId", appId.toString().split("").join(" "), "installationId", installationId.toString().split("").join(" "));
         return new octokit_1.Octokit({
             authStrategy: auth_app_1.createAppAuth,
             auth,
@@ -224,6 +223,7 @@ async function patchEnvironment(configuration, octokit, environment) {
 }
 async function main() {
     const configuration = configurationFromEnv();
+    console.log({ ...configuration, privateKey: undefined });
     const octokit = octokitFromConfiguration(configuration);
     const environments = await findEnvironments(octokit, configuration);
     const shouldPR = environments.filter((x) => environmentShouldPR(x));
