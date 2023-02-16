@@ -50,9 +50,9 @@ function configurationFromEnv() {
     const imageName = process.env.IMAGE_NAME ?? "app-image";
     const repoName = process.env.REPO_NAME ?? "k8s";
     if (process.env.GITHUB_ACTIONS === "true") {
-        if (github.context.eventName !== "push") {
-            throw new Error("Only supports push events");
-        }
+//         if (github.context.eventName !== "push") {
+//             throw new Error("Only supports push events");
+//         }
         const p = github.context.payload;
         return {
             ciProvider: "github",
