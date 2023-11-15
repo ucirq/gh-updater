@@ -38,6 +38,7 @@ interface Configuration {
 function configurationFromEnv(): Configuration {
   const imageName = process.env.IMAGE_NAME ?? "app-image";
   const repoName = process.env.REPO_NAME ?? "k8s";
+  console.log("Payload: ", github.context.payload)
   if (process.env.GITHUB_ACTIONS === "true") {
     if (github.context.eventName !== "push") {
       console.log(github.context.eventName);
