@@ -61,7 +61,7 @@ function configurationFromEnv(): Configuration {
       gitSha: p.after,
       sourceRepoName: p.repository.name,
       repoOwner: p.repository.owner.login,
-      username: p.sender.login,
+      username: "DanielTestarLite",
     };
   } else {
     const privateKey = mustEnv("PRIVATE_KEY_PEM").replaceAll("^", "\n").trim();
