@@ -258,6 +258,7 @@ async function patchEnvironment(
 }
 
 async function main() {
+  console.log("Starting new version...")
   const configuration = configurationFromEnv();
   console.log({ ...configuration, privateKey: undefined });
   const octokit = octokitFromConfiguration(configuration);
