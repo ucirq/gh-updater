@@ -3,12 +3,14 @@
   "compilerOptions": {
     "outDir": "./dist/",
     "moduleResolution": "node",
+    "module": "CommonJS",
     "strict": true,
     "allowSyntheticDefaultImports": true,
     "rootDir": "src",
     "paths": {
-      "~": ["./"]
+      "~": [
+        "./"
+      ]
     }
   }
-  
 }

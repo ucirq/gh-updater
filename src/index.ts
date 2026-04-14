@@ -4,7 +4,7 @@ import { createAppAuth } from "@octokit/auth-app";
 import { PushEvent } from "@octokit/webhooks-definitions/schema";
 import { Command } from "commander";
 import { Octokit } from "octokit";
-import YawnYaml from "yawn-yaml/cjs";
+import YawnYaml from "yawn-yaml";
 const program = new Command();
 program.option("--ignore <env>", "environment to skip");
 
@@ -41,7 +41,7 @@ function configurationFromEnv(): Configuration {
   if (process.env.GITHUB_ACTIONS === "true") {
     if (github.context.eventName !== "push") {
       console.log(github.context.eventName);
-     throw new Error("Only supports push events");
+      throw new Error("Only supports push events");
     }
     const p = github.context.payload as PushEvent;
     return {
