@@ -1,10 +1,10 @@
 {
-  "extends": "@tsconfig/node16/tsconfig.json",
+  "extends": "@tsconfig/node24/tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist/",
-    "moduleResolution": "node",
     "strict": true,
     "allowSyntheticDefaultImports": true,
+    "types": ["node"],
     "rootDir": "src",
     "paths": {
       "~": ["./"]

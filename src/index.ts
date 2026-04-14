@@ -41,7 +41,7 @@ function configurationFromEnv(): Configuration {
   if (process.env.GITHUB_ACTIONS === "true") {
     if (github.context.eventName !== "push") {
       console.log(github.context.eventName);
-     throw new Error("Only supports push events");
+      throw new Error("Only supports push events");
     }
     const p = github.context.payload as PushEvent;
     return {
@@ -112,7 +112,7 @@ async function patchRepo(
   configuration: Configuration,
   octokit: Octokit,
   environment: string,
-  branch = "master"
+  branch = "master",
 ) {
   const fileLocation = {
     owner: configuration.repoOwner,
@@ -172,7 +172,7 @@ function patchYaml(configuration: Configuration, data: string): string {
 
 async function findEnvironments(
   octokit: Octokit,
-  configuration: Configuration
+  configuration: Configuration,
 ): Promise<string[]> {
   const folderLocation = {
     owner: configuration.repoOwner,
@@ -197,7 +197,7 @@ async function createBranchOffMaster(
   octokit: Octokit,
   owner: string,
   repo: string,
-  branch: string
+  branch: string,
 ) {
   const master = await octokit.rest.git.getRef({
     owner,
@@ -217,7 +217,7 @@ async function createBranchOffMaster(
 async function patchEnvironment(
   configuration: Configuration,
   octokit: Octokit,
-  environment: string
+  environment: string,
 ) {
   const shouldPR = environmentShouldPR(environment);
   if (!shouldPR) {
@@ -230,7 +230,7 @@ async function patchEnvironment(
       octokit,
       configuration.repoOwner,
       configuration.repoName,
-      branch
+      branch,
     );
     await patchRepo(configuration, octokit, environment, branch);
 

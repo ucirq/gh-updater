@@ -1,4 +1,4 @@
-FROM node:16-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
@@ -7,9 +7,8 @@ RUN npm install
 
 COPY src ./src
 RUN npm run build
-RUN npm run package
 
-FROM node:16-alpine AS runtime
+FROM node:24-alpine AS runtime
 
 WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
