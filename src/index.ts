@@ -39,11 +39,25 @@ function configurationFromEnv(): Configuration {
   const imageName = process.env.IMAGE_NAME ?? "app-image";
   const repoName = process.env.REPO_NAME ?? "k8s";
   if (process.env.GITHUB_ACTIONS === "true") {
-    if (github.context.eventName !== "push") {
-      console.log(github.context.eventName);
-      throw new Error("Only supports push events");
+    const eventName = github.context.eventName;
+    if (eventName !== "push" && eventName !== "workflow_dispatch") {
+      console.log(eventName);
+      throw new Error("Only supports push and workflow_dispatch events");
     }
-    const p = github.context.payload as PushEvent;
+
+    // Prefer push payload fields; fall back to Actions context for workflow_dispatch.
+    const p = github.context.payload as Partial<PushEvent>;
+    const gitSha = p.after ?? github.context.sha;
+    const sourceRepoName =
+      p.repository?.name ?? github.context.repo.repo;
+    const repoOwner =
+      p.repository?.owner?.login ?? github.context.repo.owner;
+    const username = p.sender?.login ?? github.context.actor ?? null;
+
+    if (!gitSha) {
+      throw new Error("Could not resolve git SHA for deploy");
+    }
+
     return {
       ciProvider: "github",
       privateKey: core
@@ -57,10 +71,10 @@ function configurationFromEnv(): Configuration {
       installationId: core.getInput("INSTALLATION_ID", { required: true }),
       imageName,
       repoName,
-      gitSha: p.after,
-      sourceRepoName: p.repository.name,
-      repoOwner: p.repository.owner.login,
-      username: p.sender.login,
+      gitSha,
+      sourceRepoName,
+      repoOwner,
+      username,
     };
   } else {
     const privateKey = mustEnv("PRIVATE_KEY_PEM").replaceAll("^", "\n").trim();
